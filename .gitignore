@@ -1,0 +1,39 @@
+__pycache__/
+.ipynb_checkpoints/
+.venv/
+venv/
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+Thumbs.db
+*.log
+
+# Keep generated data private by default. Re-include only the compact aggregate
+# tables and precomputed DSA templates needed to run the public app.
+data/*
+!data/README.md
+!data/reference_table_sevo_all_v1_by_ET.csv
+!data/reference_table_sevo_all_v2_no_n2o_by_ET.csv
+!data/dsa_templates_v1/
+!data/dsa_templates_v1/**
+!data/des_reference_v4_all_0p1/
+!data/des_reference_v4_all_0p1/reference_table_des_all_v4_0p1_no_n2o_by_ET.csv
+!data/des_dsa_templates_v4_all_0p1/
+!data/des_dsa_templates_v4_all_0p1/**
+
+# Raw EEG, case-level, and window-level files stay local. The app can use them
+# on the development machine, but they are not required for public use.
+data/raw_vitaldb_cache*/
+data/reference_rows*.csv
+data/**/reference_rows*.csv
+data/*case_level*.csv
+data/*row_level*.csv
+
+# Runtime noise.
+logs/
+streamlit*.log
+
+# Generated analysis figures are not required to run the public app.
+figures/
+linear_power_*.png
