@@ -9,6 +9,15 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+SUMMARY_DPI = 180
+TITLE_SIZE = 15
+LABEL_SIZE = 13
+TICK_SIZE = 12
+LEGEND_SIZE = 11
+LINE_WIDTH = 2.1
+MARKER_SIZE = 5.2
+
+
 def _weighted_window_smooth(
     df: pd.DataFrame,
     x_col: str,
@@ -54,38 +63,43 @@ def plot_reference_summary(
     ]
 
     if layout == "vertical":
-        fig, axes = plt.subplots(3, 1, figsize=(5.2, 10.8))
+        fig, axes = plt.subplots(3, 1, figsize=(5.7, 11.7), dpi=SUMMARY_DPI)
     else:
-        fig, axes = plt.subplots(1, 3, figsize=(15, 3.8))
+        fig, axes = plt.subplots(1, 3, figsize=(16, 4.6), dpi=SUMMARY_DPI)
 
     axes[0].bar(
         labels,
         values,
         color=["#4C78A8", "#F58518", "#E45756", "#72B7B2"],
     )
-    axes[0].set_ylabel("Power (dB)")
-    axes[0].set_title("Expected Band Power")
+    axes[0].set_ylabel("Power (dB)", fontsize=LABEL_SIZE)
+    axes[0].set_title("Expected Band Power", fontsize=TITLE_SIZE)
     axes[0].set_ylim(-10, 25)
-    axes[0].axhline(0, color="black", linewidth=0.8)
+    axes[0].axhline(0, color="black", linewidth=1.0)
     axes[0].grid(axis="y", alpha=0.3)
+    axes[0].tick_params(axis="both", labelsize=TICK_SIZE)
 
     if not agent_age_trend.empty:
         bis_line = axes[1].plot(
             agent_age_trend["age_midpoint"],
             agent_age_trend["mean_bis"],
             marker="o",
+            markersize=MARKER_SIZE,
             color="purple",
+            linewidth=LINE_WIDTH,
             label="BIS",
         )[0]
         axes[1].set_ylim(0, 100)
-        axes[1].set_xlabel("Age (years)")
-        axes[1].set_ylabel("BIS")
+        axes[1].set_xlabel("Age (years)", fontsize=LABEL_SIZE)
+        axes[1].set_ylabel("BIS", fontsize=LABEL_SIZE)
         axes[1].grid(True, alpha=0.3)
+        axes[1].tick_params(axis="both", labelsize=TICK_SIZE)
         axes[1].axvline(
             sum(int(part) for part in str(row["age_bin"]).split("-")) / 2,
             color="black",
             linestyle="--",
             alpha=0.6,
+            linewidth=1.4,
         )
 
         ax2 = axes[1].twinx()
@@ -93,14 +107,21 @@ def plot_reference_summary(
             agent_age_trend["age_midpoint"],
             agent_age_trend["mean_sef"],
             marker="o",
+            markersize=MARKER_SIZE,
             color="tab:blue",
+            linewidth=LINE_WIDTH,
             label="SEF",
         )[0]
         ax2.set_ylim(0, 25)
-        ax2.set_ylabel("SEF (Hz)", color="tab:blue")
-        ax2.tick_params(axis="y", labelcolor="tab:blue")
+        ax2.set_ylabel("SEF (Hz)", color="tab:blue", fontsize=LABEL_SIZE)
+        ax2.tick_params(axis="y", labelcolor="tab:blue", labelsize=TICK_SIZE)
 
-        axes[1].legend([bis_line, sef_line], ["BIS", "SEF"], loc="upper left")
+        axes[1].legend(
+            [bis_line, sef_line],
+            ["BIS", "SEF"],
+            loc="upper left",
+            fontsize=LEGEND_SIZE,
+        )
     else:
         axes[1].text(
             0.5,
@@ -108,12 +129,13 @@ def plot_reference_summary(
             "No age trend data",
             ha="center",
             va="center",
+            fontsize=LABEL_SIZE,
             transform=axes[1].transAxes,
         )
         axes[1].set_axis_off()
     if age_trend_title is None:
         age_trend_title = f"Age Trend At {agent_label} {row['target_agent']:.1f}%"
-    axes[1].set_title(age_trend_title)
+    axes[1].set_title(age_trend_title, fontsize=TITLE_SIZE)
 
     plot_age_trend = age_trend.sort_values(concentration_x_col)
     if concentration_x_label is None:
@@ -129,22 +151,24 @@ def plot_reference_summary(
     )
 
     raw_alpha = 0.25 if use_smoothing else 1.0
-    raw_linewidth = 1.0 if use_smoothing else 1.8
+    raw_linewidth = 1.2 if use_smoothing else LINE_WIDTH
     raw_label = "_nolegend_" if use_smoothing else "BIS"
 
     bis_line = axes[2].plot(
         plot_age_trend[concentration_x_col],
         plot_age_trend["mean_bis"],
         marker="o",
+        markersize=MARKER_SIZE,
         color="purple",
         alpha=raw_alpha,
         linewidth=raw_linewidth,
         label=raw_label,
     )[0]
     axes[2].set_ylim(0, 100)
-    axes[2].set_xlabel(concentration_x_label)
-    axes[2].set_ylabel("BIS")
+    axes[2].set_xlabel(concentration_x_label, fontsize=LABEL_SIZE)
+    axes[2].set_ylabel("BIS", fontsize=LABEL_SIZE)
     axes[2].grid(True, alpha=0.3)
+    axes[2].tick_params(axis="both", labelsize=TICK_SIZE)
 
     ax3 = axes[2].twinx()
     raw_sef_label = "_nolegend_" if use_smoothing else "SEF"
@@ -152,14 +176,15 @@ def plot_reference_summary(
         plot_age_trend[concentration_x_col],
         plot_age_trend["mean_sef"],
         marker="o",
+        markersize=MARKER_SIZE,
         color="tab:blue",
         alpha=raw_alpha,
         linewidth=raw_linewidth,
         label=raw_sef_label,
     )[0]
     ax3.set_ylim(0, 25)
-    ax3.set_ylabel("SEF (Hz)", color="tab:blue")
-    ax3.tick_params(axis="y", labelcolor="tab:blue")
+    ax3.set_ylabel("SEF (Hz)", color="tab:blue", fontsize=LABEL_SIZE)
+    ax3.tick_params(axis="y", labelcolor="tab:blue", labelsize=TICK_SIZE)
 
     if use_smoothing:
         smoothed_bis = _weighted_window_smooth(
@@ -178,28 +203,36 @@ def plot_reference_summary(
             smoothed_bis[concentration_x_col],
             smoothed_bis["mean_bis"],
             marker="o",
+            markersize=MARKER_SIZE,
             color="purple",
-            linewidth=2.4,
+            linewidth=2.7,
             label="BIS",
         )[0]
         sef_line = ax3.plot(
             smoothed_sef[concentration_x_col],
             smoothed_sef["mean_sef"],
             marker="o",
+            markersize=MARKER_SIZE,
             color="tab:blue",
-            linewidth=2.4,
+            linewidth=2.7,
             label="SEF",
         )[0]
 
-    axes[2].legend([bis_line, sef_line], ["BIS", "SEF"], loc="upper right")
+    axes[2].legend(
+        [bis_line, sef_line],
+        ["BIS", "SEF"],
+        loc="upper right",
+        fontsize=LEGEND_SIZE,
+    )
 
     axes[2].axvline(
         selected_concentration_x,
         color="black",
         linestyle="--",
         alpha=0.6,
+        linewidth=1.4,
     )
-    axes[2].set_title(f"Trend In Age Bin {row['age_bin']}")
+    axes[2].set_title(f"Trend In Age Bin {row['age_bin']}", fontsize=TITLE_SIZE)
 
     fig.tight_layout()
     return fig
