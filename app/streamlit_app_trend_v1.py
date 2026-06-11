@@ -117,10 +117,19 @@ st.markdown(
     div.st-key-mobile_top_controls {
         display: none;
     }
+    div.st-key-reference_summary_mobile {
+        display: none;
+    }
     @media (max-width: 768px) {
         div.st-key-mobile_top_controls {
             display: block;
             margin-bottom: 1rem;
+        }
+        div.st-key-reference_summary_desktop {
+            display: none;
+        }
+        div.st-key-reference_summary_mobile {
+            display: block;
         }
         section[data-testid="stSidebar"],
         button[data-testid="stExpandSidebarButton"],
@@ -665,7 +674,22 @@ fig = plot_reference_summary(
     selected_concentration_x=selected_concentration_x,
     concentration_smooth_window=concentration_smooth_window,
 )
-st.pyplot(fig, width="stretch")
+fig_mobile = plot_reference_summary(
+    row,
+    age_trend,
+    agent_age_trend,
+    agent_label=agent_config["agent_label"],
+    age_trend_title=age_trend_title,
+    concentration_x_col=concentration_x_col,
+    concentration_x_label=concentration_x_label,
+    selected_concentration_x=selected_concentration_x,
+    concentration_smooth_window=concentration_smooth_window,
+    layout="vertical",
+)
+with st.container(key="reference_summary_desktop"):
+    st.pyplot(fig, width="stretch")
+with st.container(key="reference_summary_mobile"):
+    st.pyplot(fig_mobile, width="stretch")
 if concentration_smooth_window is not None:
     st.caption(
         f"In ET des mode, faint points show raw 0.1% cells; thick lines show "

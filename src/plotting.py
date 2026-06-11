@@ -43,6 +43,7 @@ def plot_reference_summary(
     concentration_x_label: str | None = None,
     selected_concentration_x: float | None = None,
     concentration_smooth_window: float | None = None,
+    layout: str = "horizontal",
 ):
     labels = ["Delta", "Theta", "Alpha", "Beta"]
     values = [
@@ -52,7 +53,10 @@ def plot_reference_summary(
         row["beta_power_db"],
     ]
 
-    fig, axes = plt.subplots(1, 3, figsize=(15, 3.8))
+    if layout == "vertical":
+        fig, axes = plt.subplots(3, 1, figsize=(5.2, 10.8))
+    else:
+        fig, axes = plt.subplots(1, 3, figsize=(15, 3.8))
 
     axes[0].bar(
         labels,
