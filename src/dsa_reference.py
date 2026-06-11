@@ -28,6 +28,20 @@ def load_template_index(path: str | Path) -> pd.DataFrame:
         return index
     index["age_bin"] = index["age_bin"].astype(str)
     index["target_agent"] = index["target_agent"].astype(float).round(1)
+    if "template_path" in index.columns:
+        index_path = Path(path).resolve()
+        repo_root = index_path.parents[2]
+        index_dir = index_path.parent
+
+        def normalize_template_path(template_path: str | Path) -> str:
+            normalized = Path(str(template_path).replace("\\", "/"))
+            if normalized.is_absolute():
+                return str(normalized)
+            if normalized.parts and normalized.parts[0] == "data":
+                return str(repo_root / normalized)
+            return str(index_dir / normalized)
+
+        index["template_path"] = index["template_path"].apply(normalize_template_path)
     return index
 
 
