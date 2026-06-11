@@ -608,7 +608,8 @@ if dsa_template is not None or representative is not None or representative_erro
             st.caption(
                 "Power spectrum collapsed from the DSA template. "
                 "The red dashed line is the matched SEF from the reference table. "
-                "The shaded band shows time-axis IQR within the DSA, not subject-level CI."
+                "The shaded band shows time-axis IQR within the DSA, not subject-level CI; "
+                "very narrow IQRs use a minimum visual thickness."
             )
         else:
             st.info("No Fourier graph is available without a DSA template.")

@@ -108,6 +108,13 @@ def plot_dsa_fourier_spectrum(
     center_power = np.nanmedian(power_db, axis=1)
     lower_power = np.nanpercentile(power_db, 25, axis=1)
     upper_power = np.nanpercentile(power_db, 75, axis=1)
+    display_lower_power = lower_power.copy()
+    display_upper_power = upper_power.copy()
+    min_band_width_db = 1.8
+    narrow_band = (display_upper_power - display_lower_power) < min_band_width_db
+    band_padding = (min_band_width_db - (display_upper_power - display_lower_power)) / 2.0
+    display_lower_power[narrow_band] = lower_power[narrow_band] - band_padding[narrow_band]
+    display_upper_power[narrow_band] = upper_power[narrow_band] + band_padding[narrow_band]
     keep = (freq_center_hz >= 0.5) & (freq_center_hz <= 45.0)
 
     fig, ax = plt.subplots(figsize=(5.2, 4.2))
@@ -133,10 +140,10 @@ def plot_dsa_fourier_spectrum(
 
     ax.fill_between(
         freq_center_hz[keep],
-        lower_power[keep],
-        upper_power[keep],
+        display_lower_power[keep],
+        display_upper_power[keep],
         color="#9CA3AF",
-        alpha=0.36,
+        alpha=0.45,
         linewidth=0,
         zorder=2,
     )
@@ -144,7 +151,7 @@ def plot_dsa_fourier_spectrum(
         freq_center_hz[keep],
         center_power[keep],
         color="#0F3B63",
-        linewidth=2.4,
+        linewidth=2.0,
         zorder=3,
     )
     if reference_sef_hz is not None and np.isfinite(reference_sef_hz):
