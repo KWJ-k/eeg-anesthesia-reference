@@ -147,22 +147,6 @@ def plot_dsa_fourier_spectrum(
         linewidth=2.4,
         zorder=3,
     )
-    ax.plot(
-        freq_center_hz[keep],
-        lower_power[keep],
-        color="#4B5563",
-        alpha=0.65,
-        linewidth=1.0,
-        zorder=4,
-    )
-    ax.plot(
-        freq_center_hz[keep],
-        upper_power[keep],
-        color="#4B5563",
-        alpha=0.65,
-        linewidth=1.0,
-        zorder=4,
-    )
     if reference_sef_hz is not None and np.isfinite(reference_sef_hz):
         ax.axvline(
             reference_sef_hz,
