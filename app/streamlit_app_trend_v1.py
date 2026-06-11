@@ -130,9 +130,15 @@ st.markdown(
         div.st-key-mobile_top_controls [data-testid="stVerticalBlockBorderWrapper"] {
             border-color: rgba(255, 255, 255, 0.18);
             background: #171b24;
+            padding-top: 1rem;
         }
-        div.st-key-mobile_top_controls [data-testid="stMarkdownContainer"] p {
-            margin-bottom: 0;
+        div.st-key-mobile_top_controls label {
+            display: block;
+            line-height: 1.35;
+            margin-bottom: 0.45rem;
+        }
+        div.st-key-mobile_top_controls [data-testid="stWidgetLabel"] {
+            min-height: 1.8rem;
         }
     }
     </style>
@@ -394,7 +400,6 @@ with st.sidebar:
     )
 
 with st.container(border=True, key="mobile_top_controls"):
-    st.markdown("**Input**")
     mobile_agent_col, mobile_age_col = st.columns(2)
     with mobile_agent_col:
         st.selectbox(
