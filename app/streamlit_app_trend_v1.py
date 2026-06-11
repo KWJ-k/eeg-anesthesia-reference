@@ -62,6 +62,7 @@ AGENT_CONFIGS = {
         "metric_label": "Matched ET Sevo",
         "data_note": None,
         "mac_tolerance": 0.10,
+        "et_trend_smooth_window": None,
     },
     "Desflurane": {
         "title": "Desflurane EEG Reference",
@@ -73,6 +74,7 @@ AGENT_CONFIGS = {
         "metric_label": "Matched ET Des",
         "data_note": "DES workspace is an all-eligible VitalDB build with 0.1% ET des bins.",
         "mac_tolerance": 0.10,
+        "et_trend_smooth_window": 0.20,
     },
 }
 
@@ -292,6 +294,10 @@ else:
     concentration_x_label = f"{agent_config['agent_label']} (%)"
     selected_concentration_x = float(row["target_agent"])
 
+concentration_smooth_window = (
+    agent_config["et_trend_smooth_window"] if mode != "MAC" else None
+)
+
 template_row = (
     find_template_row(dsa_index, row["age_bin"], row["target_agent"])
     if not dsa_ok.empty
@@ -433,8 +439,14 @@ fig = plot_reference_summary(
     concentration_x_col=concentration_x_col,
     concentration_x_label=concentration_x_label,
     selected_concentration_x=selected_concentration_x,
+    concentration_smooth_window=concentration_smooth_window,
 )
 st.pyplot(fig, width="stretch")
+if concentration_smooth_window is not None:
+    st.caption(
+        f"In ET des mode, faint points show raw 0.1% cells; thick lines show "
+        f"n-weighted overlapping smoothing within +/-{concentration_smooth_window:.1f}% ET des."
+    )
 
 if not dsa_ok.empty:
     with st.expander("Raw DSA template coverage"):

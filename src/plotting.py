@@ -9,6 +9,30 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
+def _weighted_window_smooth(
+    df: pd.DataFrame,
+    x_col: str,
+    y_col: str,
+    half_window: float,
+) -> pd.DataFrame:
+    smooth_df = df[[x_col, y_col, "n_cases_clean"]].dropna().copy()
+    if smooth_df.empty:
+        return smooth_df
+
+    smooth_df[x_col] = smooth_df[x_col].astype(float)
+    smooth_df[y_col] = smooth_df[y_col].astype(float)
+    smooth_df["n_cases_clean"] = smooth_df["n_cases_clean"].clip(lower=1).astype(float)
+
+    rows = []
+    for center_x in smooth_df[x_col]:
+        neighbors = smooth_df[(smooth_df[x_col] - center_x).abs() <= half_window]
+        weights = neighbors["n_cases_clean"]
+        weighted_y = float((neighbors[y_col] * weights).sum() / weights.sum())
+        rows.append({x_col: float(center_x), y_col: weighted_y})
+
+    return pd.DataFrame(rows).drop_duplicates(subset=[x_col]).sort_values(x_col)
+
+
 def plot_reference_summary(
     row: pd.Series,
     age_trend: pd.DataFrame,
@@ -18,6 +42,7 @@ def plot_reference_summary(
     concentration_x_col: str = "target_agent",
     concentration_x_label: str | None = None,
     selected_concentration_x: float | None = None,
+    concentration_smooth_window: float | None = None,
 ):
     labels = ["Delta", "Theta", "Alpha", "Beta"]
     values = [
@@ -92,12 +117,25 @@ def plot_reference_summary(
     if selected_concentration_x is None:
         selected_concentration_x = float(row[concentration_x_col])
 
+    use_smoothing = (
+        concentration_smooth_window is not None
+        and concentration_smooth_window > 0
+        and "n_cases_clean" in plot_age_trend.columns
+        and len(plot_age_trend) >= 3
+    )
+
+    raw_alpha = 0.25 if use_smoothing else 1.0
+    raw_linewidth = 1.0 if use_smoothing else 1.8
+    raw_label = "_nolegend_" if use_smoothing else "BIS"
+
     bis_line = axes[2].plot(
         plot_age_trend[concentration_x_col],
         plot_age_trend["mean_bis"],
         marker="o",
         color="purple",
-        label="BIS",
+        alpha=raw_alpha,
+        linewidth=raw_linewidth,
+        label=raw_label,
     )[0]
     axes[2].set_ylim(0, 100)
     axes[2].set_xlabel(concentration_x_label)
@@ -105,16 +143,49 @@ def plot_reference_summary(
     axes[2].grid(True, alpha=0.3)
 
     ax3 = axes[2].twinx()
+    raw_sef_label = "_nolegend_" if use_smoothing else "SEF"
     sef_line = ax3.plot(
         plot_age_trend[concentration_x_col],
         plot_age_trend["mean_sef"],
         marker="o",
         color="tab:blue",
-        label="SEF",
+        alpha=raw_alpha,
+        linewidth=raw_linewidth,
+        label=raw_sef_label,
     )[0]
     ax3.set_ylim(0, 25)
     ax3.set_ylabel("SEF (Hz)", color="tab:blue")
     ax3.tick_params(axis="y", labelcolor="tab:blue")
+
+    if use_smoothing:
+        smoothed_bis = _weighted_window_smooth(
+            plot_age_trend,
+            concentration_x_col,
+            "mean_bis",
+            float(concentration_smooth_window),
+        )
+        smoothed_sef = _weighted_window_smooth(
+            plot_age_trend,
+            concentration_x_col,
+            "mean_sef",
+            float(concentration_smooth_window),
+        )
+        bis_line = axes[2].plot(
+            smoothed_bis[concentration_x_col],
+            smoothed_bis["mean_bis"],
+            marker="o",
+            color="purple",
+            linewidth=2.4,
+            label="BIS",
+        )[0]
+        sef_line = ax3.plot(
+            smoothed_sef[concentration_x_col],
+            smoothed_sef["mean_sef"],
+            marker="o",
+            color="tab:blue",
+            linewidth=2.4,
+            label="SEF",
+        )[0]
 
     axes[2].legend([bis_line, sef_line], ["BIS", "SEF"], loc="upper right")
 
