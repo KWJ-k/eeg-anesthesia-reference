@@ -114,6 +114,27 @@ st.markdown(
             padding-top: 3.5rem;
         }
     }
+    div.st-key-mobile_top_controls {
+        display: none;
+    }
+    @media (max-width: 768px) {
+        div.st-key-mobile_top_controls {
+            display: block;
+            margin-bottom: 1rem;
+        }
+        section[data-testid="stSidebar"],
+        button[data-testid="stExpandSidebarButton"],
+        button[data-testid="stCollapseSidebarButton"] {
+            display: none !important;
+        }
+        div.st-key-mobile_top_controls [data-testid="stVerticalBlockBorderWrapper"] {
+            border-color: rgba(255, 255, 255, 0.18);
+            background: #171b24;
+        }
+        div.st-key-mobile_top_controls [data-testid="stMarkdownContainer"] p {
+            margin-bottom: 0;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -161,20 +182,112 @@ def weighted_age_slope(trend: pd.DataFrame, value_col: str) -> dict | None:
     }
 
 
+def sync_control(source_key: str, canonical_key: str, mirror_keys: tuple[str, ...] = ()) -> None:
+    value = st.session_state[source_key]
+    st.session_state[canonical_key] = value
+    for mirror_key in mirror_keys:
+        st.session_state[mirror_key] = value
+
+
+def set_control_value(key: str, value: object) -> None:
+    if st.session_state.get(key) != value:
+        st.session_state[key] = value
+
+
+def render_input_controls(
+    prefix: str,
+    agent_config: dict,
+    age_bins: list[str],
+    target_min: float,
+    target_max: float,
+    target_step: float,
+) -> None:
+    other_prefix = "mobile" if prefix == "sidebar" else "sidebar"
+    st.selectbox(
+        "Age bin",
+        age_bins,
+        key=f"{prefix}_age_bin",
+        on_change=sync_control,
+        args=(f"{prefix}_age_bin", "selected_age_bin", (f"{other_prefix}_age_bin",)),
+    )
+    mode = st.radio(
+        "Mode",
+        [agent_config["agent_label"], "MAC"],
+        horizontal=True,
+        key=f"{prefix}_mode",
+        on_change=sync_control,
+        args=(f"{prefix}_mode", "mode", (f"{other_prefix}_mode",)),
+    )
+    if mode == agent_config["agent_label"]:
+        st.slider(
+            f"{agent_config['agent_label']} (%)",
+            target_min,
+            target_max,
+            key=f"{prefix}_agent_value",
+            step=target_step,
+            on_change=sync_control,
+            args=(
+                f"{prefix}_agent_value",
+                "agent_value",
+                (f"{other_prefix}_agent_value",),
+            ),
+        )
+    else:
+        st.slider(
+            "MAC",
+            0.7,
+            1.3,
+            key=f"{prefix}_mac",
+            step=0.1,
+            on_change=sync_control,
+            args=(f"{prefix}_mac", "mac", (f"{other_prefix}_mac",)),
+        )
+    st.checkbox(
+        "Require usable cell",
+        key=f"{prefix}_require_usable",
+        on_change=sync_control,
+        args=(
+            f"{prefix}_require_usable",
+            "require_usable",
+            (f"{other_prefix}_require_usable",),
+        ),
+    )
+
+
 data_dir = ROOT / "data"
+
+available_agents = []
+for agent_name, config in AGENT_CONFIGS.items():
+    table_path = data_dir / config["table"]
+    fallback = config.get("fallback_table")
+    fallback_path = data_dir / fallback if fallback else None
+    if table_path.exists() or (fallback_path is not None and fallback_path.exists()):
+        available_agents.append(agent_name)
+
+if not available_agents:
+    st.error("No reference CSV found. Add a file to data/.")
+    st.stop()
+
+if (
+    "agent_name" not in st.session_state
+    or st.session_state["agent_name"] not in available_agents
+):
+    st.session_state["agent_name"] = available_agents[0]
+
+set_control_value("sidebar_agent", st.session_state["agent_name"])
+set_control_value("mobile_agent", st.session_state["agent_name"])
 
 with st.sidebar:
     st.header("Reference Data")
 
-    available_agents = []
-    for agent_name, config in AGENT_CONFIGS.items():
-        table_path = data_dir / config["table"]
-        fallback = config.get("fallback_table")
-        fallback_path = data_dir / fallback if fallback else None
-        if table_path.exists() or (fallback_path is not None and fallback_path.exists()):
-            available_agents.append(agent_name)
-
-    agent_name = st.selectbox("Agent", available_agents)
+    st.selectbox(
+        "Agent",
+        available_agents,
+        key="sidebar_agent",
+        on_change=sync_control,
+        args=("sidebar_agent", "agent_name", ("mobile_agent",)),
+    )
+    agent_name = st.session_state["agent_name"]
     agent_config = AGENT_CONFIGS[agent_name]
     default_path = data_dir / agent_config["table"]
     if not default_path.exists() and agent_config.get("fallback_table"):
@@ -216,14 +329,6 @@ with st.sidebar:
     st.header("Input")
     age_bins = sorted_age_bins(ref_df)
     default_age_bin = "45-49" if "45-49" in age_bins else age_bins[0]
-    selected_age_bin = st.selectbox(
-        "Age bin",
-        age_bins,
-        index=age_bins.index(default_age_bin),
-    )
-    age = age_bin_midpoint(selected_age_bin)
-    mode = st.radio("Mode", [agent_config["agent_label"], "MAC"], horizontal=True)
-
     target_values = sorted(ref_df["target_agent"].astype(float).round(1).unique())
     target_min = float(min(target_values))
     target_max = float(max(target_values))
@@ -239,23 +344,128 @@ with st.sidebar:
         else target_values[len(target_values) // 2]
     )
 
-    if mode == agent_config["agent_label"]:
-        agent_value = st.slider(
-            f"{agent_config['agent_label']} (%)",
-            target_min,
-            target_max,
-            float(target_default),
-            target_step,
+    if (
+        "selected_age_bin" not in st.session_state
+        or st.session_state["selected_age_bin"] not in age_bins
+    ):
+        st.session_state["selected_age_bin"] = default_age_bin
+    if (
+        "mode" not in st.session_state
+        or st.session_state["mode"] not in (agent_config["agent_label"], "MAC")
+    ):
+        st.session_state["mode"] = agent_config["agent_label"]
+    if (
+        "agent_value" not in st.session_state
+        or not target_min <= float(st.session_state["agent_value"]) <= target_max
+    ):
+        st.session_state["agent_value"] = float(target_default)
+    if "mac" not in st.session_state:
+        st.session_state["mac"] = 1.0
+    if "require_usable" not in st.session_state:
+        st.session_state["require_usable"] = True
+
+    for control_prefix in ("sidebar", "mobile"):
+        set_control_value(
+            f"{control_prefix}_agent",
+            st.session_state["agent_name"],
         )
-        mac = None
-    else:
-        agent_value = None
-        mac = st.slider("MAC", 0.7, 1.3, 1.0, 0.1)
+        set_control_value(
+            f"{control_prefix}_age_bin",
+            st.session_state["selected_age_bin"],
+        )
+        set_control_value(f"{control_prefix}_mode", st.session_state["mode"])
+        set_control_value(
+            f"{control_prefix}_agent_value",
+            float(st.session_state["agent_value"]),
+        )
+        set_control_value(f"{control_prefix}_mac", float(st.session_state["mac"]))
+        set_control_value(
+            f"{control_prefix}_require_usable",
+            bool(st.session_state["require_usable"]),
+        )
 
-    require_usable = st.checkbox("Require usable cell", value=True)
+    render_input_controls(
+        "sidebar",
+        agent_config,
+        age_bins,
+        target_min,
+        target_max,
+        target_step,
+    )
 
+with st.container(border=True, key="mobile_top_controls"):
+    st.markdown("**Input**")
+    mobile_agent_col, mobile_age_col = st.columns(2)
+    with mobile_agent_col:
+        st.selectbox(
+            "Agent",
+            available_agents,
+            key="mobile_agent",
+            on_change=sync_control,
+            args=("mobile_agent", "agent_name", ("sidebar_agent",)),
+        )
+    with mobile_age_col:
+        st.selectbox(
+            "Age bin",
+            age_bins,
+            key="mobile_age_bin",
+            on_change=sync_control,
+            args=("mobile_age_bin", "selected_age_bin", ("sidebar_age_bin",)),
+        )
+    mobile_mode_col, mobile_dose_col = st.columns(2)
+    with mobile_mode_col:
+        mobile_mode = st.radio(
+            "Mode",
+            [agent_config["agent_label"], "MAC"],
+            horizontal=True,
+            key="mobile_mode",
+            on_change=sync_control,
+            args=("mobile_mode", "mode", ("sidebar_mode",)),
+        )
+    with mobile_dose_col:
+        if mobile_mode == agent_config["agent_label"]:
+            st.slider(
+                f"{agent_config['agent_label']} (%)",
+                target_min,
+                target_max,
+                key="mobile_agent_value",
+                step=target_step,
+                on_change=sync_control,
+                args=("mobile_agent_value", "agent_value", ("sidebar_agent_value",)),
+            )
+        else:
+            st.slider(
+                "MAC",
+                0.7,
+                1.3,
+                key="mobile_mac",
+                step=0.1,
+                on_change=sync_control,
+                args=("mobile_mac", "mac", ("sidebar_mac",)),
+            )
+    st.checkbox(
+        "Require usable cell",
+        key="mobile_require_usable",
+        on_change=sync_control,
+        args=(
+            "mobile_require_usable",
+            "require_usable",
+            ("sidebar_require_usable",),
+        ),
+    )
 
 st.title(agent_config["title"])
+
+selected_age_bin = st.session_state["selected_age_bin"]
+age = age_bin_midpoint(selected_age_bin)
+mode = st.session_state["mode"]
+require_usable = bool(st.session_state["require_usable"])
+if mode == agent_config["agent_label"]:
+    agent_value = float(st.session_state["agent_value"])
+    mac = None
+else:
+    agent_value = None
+    mac = float(st.session_state["mac"])
 
 row, err = lookup_reference(
     ref_df,
