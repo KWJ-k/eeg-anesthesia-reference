@@ -531,6 +531,30 @@ concentration_smooth_window = (
     agent_config["et_trend_smooth_window"] if mode != "MAC" else None
 )
 
+fig = plot_reference_summary(
+    row,
+    age_trend,
+    agent_age_trend,
+    agent_label=agent_config["agent_label"],
+    age_trend_title=age_trend_title,
+    concentration_x_col=concentration_x_col,
+    concentration_x_label=concentration_x_label,
+    selected_concentration_x=selected_concentration_x,
+    concentration_smooth_window=concentration_smooth_window,
+)
+fig_mobile = plot_reference_summary(
+    row,
+    age_trend,
+    agent_age_trend,
+    agent_label=agent_config["agent_label"],
+    age_trend_title=age_trend_title,
+    concentration_x_col=concentration_x_col,
+    concentration_x_label=concentration_x_label,
+    selected_concentration_x=selected_concentration_x,
+    concentration_smooth_window=concentration_smooth_window,
+    layout="vertical",
+)
+
 template_row = (
     find_template_row(dsa_index, row["age_bin"], row["target_agent"])
     if not dsa_ok.empty
@@ -614,6 +638,16 @@ if dsa_template is not None or representative is not None or representative_erro
         else:
             st.info("No Fourier graph is available without a DSA template.")
 
+with st.container(key="reference_summary_desktop"):
+    st.pyplot(fig, width="stretch")
+with st.container(key="reference_summary_mobile"):
+    st.pyplot(fig_mobile, width="stretch")
+if concentration_smooth_window is not None:
+    st.caption(
+        f"In ET des mode, faint points show raw 0.1% cells; thick lines show "
+        f"n-weighted overlapping smoothing within +/-{concentration_smooth_window:.1f}% ET des."
+    )
+
 st.subheader("Matched Reference")
 st.dataframe(result_df, width="stretch", hide_index=True)
 
@@ -662,39 +696,6 @@ if bis_slope is not None and sef_slope is not None:
         "Weights use n_cases_clean, so larger reference cells contribute more. "
         "Cell N cases is the selected matched cell only; trend counts summarize the cells used for the age-trend fit. "
         + trend_mode_note
-    )
-
-fig = plot_reference_summary(
-    row,
-    age_trend,
-    agent_age_trend,
-    agent_label=agent_config["agent_label"],
-    age_trend_title=age_trend_title,
-    concentration_x_col=concentration_x_col,
-    concentration_x_label=concentration_x_label,
-    selected_concentration_x=selected_concentration_x,
-    concentration_smooth_window=concentration_smooth_window,
-)
-fig_mobile = plot_reference_summary(
-    row,
-    age_trend,
-    agent_age_trend,
-    agent_label=agent_config["agent_label"],
-    age_trend_title=age_trend_title,
-    concentration_x_col=concentration_x_col,
-    concentration_x_label=concentration_x_label,
-    selected_concentration_x=selected_concentration_x,
-    concentration_smooth_window=concentration_smooth_window,
-    layout="vertical",
-)
-with st.container(key="reference_summary_desktop"):
-    st.pyplot(fig, width="stretch")
-with st.container(key="reference_summary_mobile"):
-    st.pyplot(fig_mobile, width="stretch")
-if concentration_smooth_window is not None:
-    st.caption(
-        f"In ET des mode, faint points show raw 0.1% cells; thick lines show "
-        f"n-weighted overlapping smoothing within +/-{concentration_smooth_window:.1f}% ET des."
     )
 
 if not dsa_ok.empty:
