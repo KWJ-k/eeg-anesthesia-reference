@@ -105,6 +105,15 @@ st.markdown(
         padding-top: 1rem;
         padding-bottom: 2rem;
     }
+    @media (max-width: 768px) {
+        header[data-testid="stHeader"] {
+            height: 3rem;
+            background: #0e1117;
+        }
+        .block-container {
+            padding-top: 3.5rem;
+        }
+    }
     </style>
     """,
     unsafe_allow_html=True,
